@@ -1,0 +1,5 @@
+.idea
+.idea/*
+.travis.yml
+logs/*
+.env
