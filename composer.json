@@ -1,5 +1,5 @@
 {
-    "name": "chen-pengfei/vanilla-framework",
+    "name": "vanduke/vanilla-framework",
     "require": {
         "filp/whoops": "^2.2",
         "nikic/fast-route": "^1.3",
