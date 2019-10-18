@@ -9,7 +9,6 @@
 namespace Vanilla\Exceptions;
 
 use GuzzleHttp\Exception\RequestException;
-use Vanilla\Log\Log;
 use Whoops\Handler\JsonResponseHandler;
 use Whoops\Run;
 
@@ -48,6 +47,7 @@ class Handler
                 $log['headers'] = $request->getHeaders();
                 $log['status'] = !empty($response) ? $response->getStatusCode() : 0;
                 $log['response'] = !empty($response) ? $response->getBody()->getContents() : '';
+
                 $log['message'] = $exception->getMessage();
                 $log['file'] = $exception->getFile();
                 $log['line'] = $exception->getLine();

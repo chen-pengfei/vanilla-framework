@@ -8,11 +8,7 @@
 
 namespace Vanilla;
 
-
-use App\Exceptions\Handler;
-use Monolog\Formatter\JsonFormatter;
-use Monolog\Formatter\LineFormatter;
-use Monolog\Processor\WebProcessor;
+use Vanilla\Exceptions\Handler;
 use Predis\Client;
 use Vanilla\Cache\Redis;
 use Vanilla\Config\ArrayConfig;
