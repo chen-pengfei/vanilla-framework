@@ -15,7 +15,7 @@ class RequestProcessor implements ProcessorInterface
         $record['referer'] = isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '';
 
         if (isset($_SERVER['CONTENT_TYPE'])) {
-            $record['contentType'] = $_SERVER['CONTENT_TYPE'];
+            $record['contentType'] = explode(';',$_SERVER['CONTENT_TYPE']);
         }
 
         $record['clientIp'] = getClientIp();

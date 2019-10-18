@@ -132,21 +132,64 @@ function session($key = null, $default = null)
 
 }
 
-function uuid($version = 'v4', $request = false)
-{
+
+/**
+ *  网关traceId
+ */
+function gatewayTraceId(){
+    if (isset($_SERVER[strtoupper('HTTP_X_Ca_Traceid')])) {
+        return $_SERVER[strtoupper('HTTP_X_Ca_Traceid')];
+    }
+    return '';
+}
+
+function traceId(){
     static $traceId = null;
-    if ($request) {
-        if (isset($_SERVER[strtoupper('HTTP_X_Ca_Traceid')])) {
-            $traceId = $_SERVER[strtoupper('HTTP_X_Ca_Traceid')];
-        } else if($traceId === null) {
-            $traceId = uuid();
+
+    if (function_exists("skywalking_get_trace_info")) {//sw
+        $sw = skywalking_get_trace_info();
+        if(!empty($sw['globalTraceIds'][0])){
+            return $sw['globalTraceIds'][0];
         }
-        return $traceId;
     }
 
+    if (!empty(gatewayTraceId())) {//网关
+        return gatewayTraceId();
+    }
+
+    if($traceId === null) {//框架
+        $traceId = uuid();
+    }
+
+    return $traceId;
+}
+
+function uuid($version = 'v4')
+{
     $uuid = \Ramsey\Uuid\Uuid::uuid4();
     return $uuid->toString();
 }
+
+
+/**
+ * 获取客户端IP
+ */
+function getClientIp()
+{
+    $onlineip = '';
+    if (getenv('HTTP_CLIENT_IP') && strcasecmp(getenv('HTTP_CLIENT_IP'), 'unknown')) {
+        $onlineip = getenv('HTTP_CLIENT_IP');
+    } elseif (getenv('HTTP_X_FORWARDED_FOR') && strcasecmp(getenv('HTTP_X_FORWARDED_FOR'), 'unknown')) {
+        //如果是waf地址则只保留用户真实ip即可
+        $onlineip = explode(',', getenv('HTTP_X_FORWARDED_FOR'))[0];
+    } elseif (getenv('REMOTE_ADDR') && strcasecmp(getenv('REMOTE_ADDR'), 'unknown')) {
+        $onlineip = getenv('REMOTE_ADDR');
+    } elseif (isset($_SERVER['REMOTE_ADDR']) && $_SERVER['REMOTE_ADDR'] && strcasecmp($_SERVER['REMOTE_ADDR'], 'unknown')) {
+        $onlineip = $_SERVER['REMOTE_ADDR'];
+    }
+    return $onlineip;
+}
+
 
 function debug($message, array $context = array())
 {
