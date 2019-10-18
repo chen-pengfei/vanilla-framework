@@ -9,7 +9,15 @@ class TraceIdProcessor implements ProcessorInterface
 {
     public function __invoke(array $record)
     {
-        $record['extra']['traceId'] = uuid('v4', true);
+        $record['traceId'] = traceId();
+        $record['gwTraceId'] = gatewayTraceId();
+
+        if (php_sapi_name() == 'cli') {
+            if(!empty($_SERVER['CLI_TRACEID'])){
+                $record['traceId'] = $_SERVER['CLI_TRACEID'];
+            }
+        }
+
         return $record;
     }
 

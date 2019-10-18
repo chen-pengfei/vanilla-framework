@@ -17,15 +17,15 @@ use Predis\Client;
 use Vanilla\Cache\Redis;
 use Vanilla\Config\ArrayConfig;
 use Vanilla\Contracts\Process;
-use Vanilla\Contracts\Stream\Input;
 use Vanilla\Exceptions\FatalThrowableError;
-use Vanilla\Exceptions\MethodNotAllowedHttpException;
-use Vanilla\Exceptions\NotFoundHttpException;
 use Vanilla\Http\Request;
 use Vanilla\Http\Response;
 use Vanilla\Log\AccessHandler;
+use Vanilla\Log\AccessProcessor;
+use Vanilla\Log\RequestProcessor;
+use Vanilla\Log\TimeProcessor;
 use Vanilla\Log\TraceIdProcessor;
-use Vanilla\Log\EnterParamProcessor;
+use Vanilla\Log\ZhiXingFormatter;
 use Vanilla\Routing\Router;
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
@@ -58,10 +58,7 @@ class Application implements \ArrayAccess
 
     public function __construct($basePath = null)
     {
-        define('BEGIN_TIME', microtime(TRUE));
         $this->basePath = $basePath;
-
-        date_default_timezone_set('Asia/Shanghai');
 
         $logger = new Logger('vanilla');
         $loggerLevel = env('APP_LOG_LEVEL', 'debug');
@@ -72,30 +69,42 @@ class Application implements \ArrayAccess
             'warning' => Logger::WARNING
         ];
         $run = new StreamHandler($basePath . '/logs/' . date('Y-m-d') . '/run.log', $loggerLevelMap[$loggerLevel]);
-        $run->setFormatter(new JsonFormatter());
+        $run->setFormatter(new ZhiXingFormatter());
         $error = new StreamHandler($basePath . '/logs/' . date('Y-m-d') . '/error.log', Logger::ERROR, false);
-        $error->setFormatter(new JsonFormatter());
+        $error->setFormatter(new ZhiXingFormatter());
+
         $logger->pushHandler($run);
         $logger->pushHandler($error);
-        $logger->pushProcessor(new TraceIdProcessor());
-        $logger->pushProcessor(new WebProcessor());
-        $this['log'] = $logger;
 
-        if (static::$accessLog == null) {
-            static::$accessLog = new Logger('vanilla');
-            $access = new AccessHandler($basePath . '/logs/' . date('Y-m-d') . '/access.log', Logger::INFO);
-            $access->setFormatter(new JsonFormatter());
-            static::$accessLog->pushHandler($access);
-            static::$accessLog->pushProcessor(new TraceIdProcessor());
-            static::$accessLog->pushProcessor(new EnterParamProcessor());
-            static::$accessLog->pushProcessor(new WebProcessor());
-            static::$accessLog->info("access log record");
+        $logger->pushProcessor(new TraceIdProcessor());
+        if (php_sapi_name() != 'cli') {
+            $logger->pushProcessor(new RequestProcessor());
         }
+        $this['log'] = $logger;
 
         $this->bootstrapContainer();
         $this->registerErrorHandling();
 
+        if (php_sapi_name() != 'cli') {
+            register_shutdown_function([$this, 'access']);
+        }
+
         static::$instance = $this;
+    }
+
+    public function access()
+    {
+        if (static::$accessLog == null) {
+            static::$accessLog = new Logger('vanilla');
+            $access = new AccessHandler($this->basePath . '/logs/' . date('Y-m-d') . '/access.log', Logger::INFO);
+            $access->setFormatter(new ZhiXingFormatter());
+            static::$accessLog->pushHandler($access);
+            static::$accessLog->pushProcessor(new TraceIdProcessor());
+            static::$accessLog->pushProcessor(new RequestProcessor());
+            static::$accessLog->pushProcessor(new AccessProcessor());
+            static::$accessLog->pushProcessor(new TimeProcessor());
+            static::$accessLog->info("access log record");
+        }
     }
 
     public function process(Process $process)
